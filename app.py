@@ -81,7 +81,7 @@ def calculate_GMV_no_card(df, weights, internal_loan_repayment_rate, include_ref
     return GMV, adjusted_cash_in_bank_loan, adjusted_cash_in_internal_loan
 
 # Функция расчета CM2 без компонента оплаты картой
-def calculate_CM2(weights, internal_loan_repayment_rate, include_refunds=is_include_refunds):
+def calculate_CM2(weights, internal_loan_repayment_rate):
     weight_bank_loan, weight_internal_loan = weights
     
     # Перерасчет cash-in для банковской и внутренней рассрочек

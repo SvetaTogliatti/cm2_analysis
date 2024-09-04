@@ -81,25 +81,33 @@ def calculate_GMV_no_card(df, weights, internal_loan_repayment_rate, include_ref
     return GMV, adjusted_cash_in_bank_loan, adjusted_cash_in_internal_loan
 
 # Функция расчета CM2 без компонента оплаты картой
-def calculate_CM2(df, weights, internal_loan_repayment_rate, include_refunds):
+def calculate_CM2(weights, internal_loan_repayment_rate, include_refunds=is_include_refunds):
     weight_bank_loan, weight_internal_loan = weights
     
-    C1 = df['conv'] * (weight_bank_loan * df['CR_bank_loan'] + weight_internal_loan * df['CR_internal_loan'])
-    orders_bank_loan = df['orders'] * C1 * weight_bank_loan
-    orders_internal_loan = df['orders'] * C1 * weight_internal_loan
+    # Перерасчет cash-in для банковской и внутренней рассрочек
+    C1 = P * (weight_bank_loan * CR_bank_loan + weight_internal_loan * CR_internal_loan)
+    orders_bank_loan = Orders * C1 * weight_bank_loan
+    orders_internal_loan = Orders * C1 * weight_internal_loan
     
+    # Учет возвратов (если включено)
     if include_refunds:
-        adjusted_cash_in_bank_loan = orders_bank_loan * df['ATV_bank_loan'] * (1 - df['bank_loan_commission'] - df['ya_split_comission']) * (1 - df['bank_loan_refunds_share'])
-        adjusted_cash_in_internal_loan = orders_internal_loan * df['FTV_internal_loan'] * internal_loan_repayment_rate * (1 - df['internal_loan_commission']) * df['inflation_adjustment_factor'] * (1 - df['internal_loan_refunds_share'])
+        adjusted_cash_in_bank_loan = orders_bank_loan * ATV_bank_loan * (1 - bank_loan_commission - ya_split_comission) * (1 - bank_loan_refunds_share)
+        adjusted_cash_in_internal_loan = orders_internal_loan * FTV_internal_loan * internal_loan_repayment_rate * (1 - internal_loan_commission) * inflation_adjustment_factor * (1 - internal_loan_refunds_share)
+        adjusted_cm2_bank_loan = orders_bank_loan * ATV_bank_loan * (1 - bank_loan_commission - ya_split_comission) * (1 - bank_loan_refunds_share) * (1 - sm - cogs - ops)
+        adjusted_cm2_internal_loan = orders_internal_loan * FTV_internal_loan * internal_loan_repayment_rate * (1 - internal_loan_commission) * inflation_adjustment_factor * (1 - internal_loan_refunds_share) * (1 - sm - cogs - ops)
     else:
-        adjusted_cash_in_bank_loan = orders_bank_loan * df['ATV_bank_loan'] * (1 - df['bank_loan_commission'] - df['ya_split_comission'])
-        adjusted_cash_in_internal_loan = orders_internal_loan * df['FTV_internal_loan'] * internal_loan_repayment_rate * (1 - df['internal_loan_commission']) * df['inflation_adjustment_factor']
+        adjusted_cash_in_bank_loan = orders_bank_loan * ATV_bank_loan * (1 - bank_loan_commission - ya_split_comission)
+        adjusted_cash_in_internal_loan = orders_internal_loan * FTV_internal_loan * internal_loan_repayment_rate * (1 - internal_loan_commission) * inflation_adjustment_factor
+        adjusted_cm2_bank_loan = orders_bank_loan * ATV_bank_loan * (1 - bank_loan_commission - ya_split_comission) * (1 - sm - cogs - ops)
+        adjusted_cm2_internal_loan = orders_internal_loan * FTV_internal_loan * internal_loan_repayment_rate * (1 - internal_loan_commission) * inflation_adjustment_factor * (1 - sm - cogs - ops)    
     
+    # Расчет GMV
     GMV = adjusted_cash_in_bank_loan + adjusted_cash_in_internal_loan
+
+    # Расчет CM2
+    CM2 = GMV - GMV*sm - GMV*cogs - GMV*ops
     
-    CM2 = GMV * (1 - df['sm'] - df['cogs'] - df['ops'])
-    
-    return CM2, adjusted_cash_in_bank_loan, adjusted_cash_in_internal_loan
+    return CM2, adjusted_cm2_bank_loan, adjusted_cm2_internal_loan
 
 # Основная функция приложения
 def main():

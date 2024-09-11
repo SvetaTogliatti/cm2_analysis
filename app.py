@@ -37,18 +37,19 @@ df = pd.DataFrame(data, columns=columns)
 df['CR_bank_loan'] = df['approve_rate'] * df['take_rate']
 df['months_inflation_rate'] = (1 + df['annual_inflation_rate']) ** (1/12) - 1
 df['inflation_adjustment_factor'] = (1 + df['months_inflation_rate']) ** (-df['average_loan_period_months'])
+df['bank_discount_amt'] = round((df['ATV_bank_loan'] * df['bank_loan_commission']) / (1 - df['bank_loan_commission']),0)
 
 # Функция расчета финансовых метрик
 def calculate_financial_metrics(df, include_refunds):
     if include_refunds:
-        df['cash_in_bank_loan'] = df['bank_payments'] * df['ATV_bank_loan'] * (1 + df['bank_loan_commission']) * (1 - df['bank_loan_refunds_share'])
+        df['cash_in_bank_loan'] = df['bank_payments'] * (df['ATV_bank_loan'] + df['bank_discount_amt']) * (1 - df['bank_loan_refunds_share'])
         df['cash_in_internal_loan'] = df['installment_payments'] * df['FTV_internal_loan'] * df['internal_loan_repayment_rate'] * df['inflation_adjustment_factor'] * (1 - df['internal_loan_refunds_share'])
         df['GMV'] = df['cash_in_bank_loan'] + df['cash_in_internal_loan']
         df['CM2_bank_loan'] = df['cash_in_bank_loan'] * (1 - df['sm'] - df['cogs'] - df['ops'] - df['bank_loan_commission'] - df['ya_split_comission'])
         df['CM2_internal_loan'] = df['cash_in_internal_loan'] * (1 - df['sm'] - df['cogs'] - df['ops'] - df['internal_loan_commission'])
         df['CM2'] = df['CM2_bank_loan'] + df['CM2_internal_loan']
     else:
-        df['cash_in_bank_loan'] = df['bank_payments'] * df['ATV_bank_loan'] * (1 + df['bank_loan_commission'])
+        df['cash_in_bank_loan'] = df['bank_payments'] * (df['ATV_bank_loan'] + df['bank_discount_amt'])
         df['cash_in_internal_loan'] = df['installment_payments'] * df['FTV_internal_loan'] * df['internal_loan_repayment_rate'] * df['inflation_adjustment_factor']
         df['GMV'] = df['cash_in_bank_loan'] + df['cash_in_internal_loan']
         df['CM2_bank_loan'] = df['cash_in_bank_loan'] * (1 - df['sm'] - df['cogs'] - df['ops'] - df['bank_loan_commission'] - df['ya_split_comission'])
@@ -70,10 +71,10 @@ def calculate_GMV_no_card(df, weights, internal_loan_repayment_rate, include_ref
     orders_internal_loan = df['orders'] * C1 * weight_internal_loan
     
     if include_refunds:
-        adjusted_cash_in_bank_loan = orders_bank_loan * df['ATV_bank_loan'] * (1 + df['bank_loan_commission']) * (1 - df['bank_loan_refunds_share'])
+        adjusted_cash_in_bank_loan = orders_bank_loan * (df['ATV_bank_loan'] + df['bank_discount_amt']) * (1 - df['bank_loan_refunds_share'])
         adjusted_cash_in_internal_loan = orders_internal_loan * df['FTV_internal_loan'] * internal_loan_repayment_rate * df['inflation_adjustment_factor'] * (1 - df['internal_loan_refunds_share'])
     else:
-        adjusted_cash_in_bank_loan = orders_bank_loan * df['ATV_bank_loan'] * (1 + df['bank_loan_commission'])
+        adjusted_cash_in_bank_loan = orders_bank_loan * (df['ATV_bank_loan'] + df['bank_discount_amt'])
         adjusted_cash_in_internal_loan = orders_internal_loan * df['FTV_internal_loan'] * internal_loan_repayment_rate * df['inflation_adjustment_factor']
     
     GMV = adjusted_cash_in_bank_loan + adjusted_cash_in_internal_loan
@@ -89,12 +90,12 @@ def calculate_CM2(df, weights, internal_loan_repayment_rate, include_refunds):
     orders_internal_loan = df['orders'] * C1 * weight_internal_loan
     
     if include_refunds:
-        adjusted_cash_in_bank_loan = orders_bank_loan * df['ATV_bank_loan'] * (1 + df['bank_loan_commission']) * (1 - df['bank_loan_refunds_share'])
+        adjusted_cash_in_bank_loan = orders_bank_loan * (df['ATV_bank_loan'] + df['bank_discount_amt']) * (1 - df['bank_loan_refunds_share'])
         adjusted_cash_in_internal_loan = orders_internal_loan * df['FTV_internal_loan'] * internal_loan_repayment_rate * df['inflation_adjustment_factor'] * (1 - df['internal_loan_refunds_share'])
         adjusted_cm2_bank_loan = adjusted_cash_in_bank_loan * (1 - df['sm'] - df['cogs'] - df['ops'] - df['bank_loan_commission'] - df['ya_split_comission'])
         adjusted_cm2_internal_loan = adjusted_cash_in_internal_loan * (1 - df['sm'] - df['cogs'] - df['ops'] - df['internal_loan_commission'])
     else:
-        adjusted_cash_in_bank_loan = orders_bank_loan * df['ATV_bank_loan'] * (1 + df['bank_loan_commission'])
+        adjusted_cash_in_bank_loan = orders_bank_loan * (df['ATV_bank_loan'] + df['bank_discount_amt'])
         adjusted_cash_in_internal_loan = orders_internal_loan * df['FTV_internal_loan'] * internal_loan_repayment_rate * df['inflation_adjustment_factor']
         adjusted_cm2_bank_loan = adjusted_cash_in_bank_loan * (1 - df['sm'] - df['cogs'] - df['ops'] - df['bank_loan_commission'] - df['ya_split_comission'])
         adjusted_cm2_internal_loan = adjusted_cash_in_internal_loan * (1 - df['sm'] - df['cogs'] - df['ops'] - df['internal_loan_commission'])   
@@ -144,6 +145,7 @@ def main():
     st.sidebar.write("'internal_loan_repayment_rate' - фактическая выплачиваемость внутренней рассрочки")
     st.sidebar.write("'months_inflation_rate' - месячная инфляция")
     st.sidebar.write("'inflation_adjustment_factor' - поправка на инфляцию")
+    st.sidebar.write("'bank_discount_amt' - сумма скидки банковской рассрочки")
     
     # Фильтр по портфелю
     selected_portfolio = st.selectbox("Выберите портфель", df['portfolio'].unique())

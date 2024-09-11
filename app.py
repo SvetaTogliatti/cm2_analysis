@@ -45,7 +45,7 @@ def calculate_financial_metrics(df, include_refunds):
         df['cash_in_internal_loan'] = df['installment_payments'] * df['FTV_internal_loan'] * df['internal_loan_repayment_rate'] * df['inflation_adjustment_factor'] * (1 - df['internal_loan_refunds_share'])
         df['GMV'] = df['cash_in_bank_loan'] + df['cash_in_internal_loan']
         df['CM2_bank_loan'] = df['cash_in_bank_loan'] * (1 - df['sm'] - df['cogs'] - df['ops'] - df['bank_loan_commission'] - df['ya_split_comission'])
-        df['CM2_internal_loan'] = df['cash_in_internal'] * (1 - df['sm'] - df['cogs'] - df['ops'] - df['internal_loan_commission'])
+        df['CM2_internal_loan'] = df['cash_in_internal_loan'] * (1 - df['sm'] - df['cogs'] - df['ops'] - df['internal_loan_commission'])
         df['CM2'] = df['CM2_bank_loan'] + df['CM2_internal_loan']
     else:
         df['cash_in_bank_loan'] = df['bank_payments'] * df['ATV_bank_loan'] * (1 + df['bank_loan_commission'])

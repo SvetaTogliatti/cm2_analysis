@@ -39,7 +39,7 @@ df['months_inflation_rate'] = (1 + df['annual_inflation_rate']) ** (1/12) - 1
 df['inflation_adjustment_factor'] = (1 + df['months_inflation_rate']) ** (-df['average_loan_period_months'])
 
 # Функция расчета финансовых метрик
-def calculate_financial_metrics(df, gmv=True, include_refunds=True):
+def calculate_financial_metrics(df, include_refunds):
     if include_refunds:
         df['cash_in_bank_loan'] = df['bank_payments'] * df['ATV_bank_loan'] * (1 + df['bank_loan_commission']) * (1 - df['bank_loan_refunds_share'])
         df['cash_in_internal'] = df['installment_payments'] * df['FTV_internal_loan'] * df['internal_loan_repayment_rate'] * df['inflation_adjustment_factor'] * (1 - df['internal_loan_refunds_share'])
@@ -55,16 +55,10 @@ def calculate_financial_metrics(df, gmv=True, include_refunds=True):
         df['CM2_internal_loan'] = df['cash_in_internal_loan'] * (1 - df['sm'] - df['cogs'] - df['ops'] - df['internal_loan_commission'])
         df['CM2'] = df['CM2_bank_loan'] + df['CM2_internal_loan']
     
-    df['bank_loan_share_of_gmv'] = round(df['cash_in_bank_loan'] * 100 / df['GMV'], 2)
-    df['internal_loan_share_of_gmv'] = round(df['cash_in_internal_loan'] * 100 / df['GMV'], 2)
     df['bank_loan_share_of_cm2'] = round(df['CM2_bank_loan'] * 100 / df['CM2'], 2)
     df['internal_loan_share_of_cm2'] = round(df['CM2_internal_loan'] * 100 / df['CM2'], 2)
     
-    if gmv:
-        dff = df[['portfolio','cash_in_bank_loan','cash_in_internal_loan','GMV','bank_loan_share_of_gmv','internal_loan_share_of_gmv']]
-    else:
-        dff = df[['portfolio','CM2_bank_loan','CM2_internal_loan','CM2','bank_loan_share_of_cm2','internal_loan_share_of_cm2']]
-    
+    dff = df[['portfolio','CM2_bank_loan','CM2_internal_loan','CM2','bank_loan_share_of_cm2','internal_loan_share_of_cm2']]
     return dff
 
 # Функция расчета GMV без компонента оплаты картой
